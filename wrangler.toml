@@ -1,0 +1,7 @@
+name = "kiro-account-manager"
+main = "worker/index.js"
+compatibility_date = "2024-10-01"
+
+kv_namespaces = [
+  { binding = "ACCOUNT_KV", id = "CHANGE_ME", preview_id = "CHANGE_ME" }
+]
