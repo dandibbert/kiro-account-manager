@@ -1,7 +1,5 @@
-import { useState, useEffect } from 'react'
-import { invoke } from '@tauri-apps/api/core'
-import { getVersion } from '@tauri-apps/api/app'
-import { Home, Key, Settings, Info, User, LogIn, Globe, Sun, Moon, Palette, Settings2, Languages } from 'lucide-react'
+import { useState } from 'react'
+import { Home, Key, Info, Sun, Moon, Palette, Languages } from 'lucide-react'
 import { useTheme, themes } from '../contexts/ThemeContext'
 import { useI18n, locales } from '../i18n.jsx'
 
@@ -10,27 +8,17 @@ function useMenuItems() {
   return [
     { id: 'home', label: t('nav.home'), icon: Home },
     { id: 'token', label: t('nav.accounts'), icon: Key },
-    { id: 'kiro-config', label: t('nav.kiroConfig'), icon: Settings2 },
-    { id: 'login', label: t('nav.desktopOAuth'), icon: LogIn, desc: t('nav.socialIdC') },
-    { id: 'web-oauth', label: t('nav.webOAuth'), icon: Globe, desc: t('nav.webviewLogin') },
-    { id: 'settings', label: t('nav.settings'), icon: Settings },
     { id: 'about', label: t('nav.about'), icon: Info },
   ]
 }
 
-function Sidebar({ activeMenu, onMenuChange }) {
-  const [localToken, setLocalToken] = useState(null)
+function Sidebar({ activeMenu, onMenuChange, onLogout }) {
   const [showThemeMenu, setShowThemeMenu] = useState(false)
   const [showLangMenu, setShowLangMenu] = useState(false)
-  const [version, setVersion] = useState('')
   const { theme, setTheme, colors } = useTheme()
   const { locale, setLocale, loading: langLoading } = useI18n()
   const menuItems = useMenuItems()
-
-  useEffect(() => {
-    invoke('get_kiro_local_token').then(setLocalToken).catch(() => {})
-    getVersion().then(setVersion)
-  }, [])
+  const version = import.meta.env.VITE_APP_VERSION || ''
 
   const themeIcons = { light: Sun, dark: Moon, purple: Palette, green: Palette }
   const ThemeIcon = themeIcons[theme] || Sun
@@ -80,27 +68,6 @@ function Sidebar({ activeMenu, onMenuChange }) {
           )
         })}
       </nav>
-
-      {/* Kiro IDE 本地连接状态 */}
-      {localToken && (
-        <div className={`mx-3 mb-3 ${colors.sidebarCard} rounded-xl p-3 animate-fade-in-up card-glow`} style={{ animationDelay: '0.5s' }}>
-          <div className={`text-xs ${colors.sidebarMuted} mb-2 flex items-center gap-1.5`}>
-            <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></div>
-            Kiro IDE 已连接
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center text-sm font-medium text-green-300 transition-transform hover:scale-110">
-              <User size={14} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-xs font-medium truncate">{localToken.provider || 'Local'}</div>
-              <div className={`text-xs ${colors.sidebarMuted}`}>
-                {localToken.expiresAt ? new Date(localToken.expiresAt).toLocaleTimeString() : ''}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Theme & Language & Version */}
       <div className={`px-3 pb-3 flex items-center justify-between gap-2`}>
@@ -168,7 +135,13 @@ function Sidebar({ activeMenu, onMenuChange }) {
           )}
         </div>
         
-        <span className={`text-xs ${colors.sidebarMuted} ml-auto`}>v{version || '...'}</span>
+        <button
+          onClick={onLogout}
+          className={`ml-auto text-xs ${colors.sidebarMuted} hover:text-white transition-colors`}
+        >
+          退出
+        </button>
+        <span className={`text-xs ${colors.sidebarMuted}`}>v{version || '...'}</span>
       </div>
     </div>
   )

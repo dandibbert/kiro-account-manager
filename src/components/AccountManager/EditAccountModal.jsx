@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { invoke } from '@tauri-apps/api/core'
 import { X, Key, Copy, Check, Shield, ChevronDown, ChevronUp, Clock } from 'lucide-react'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useDialog } from '../../contexts/DialogContext'
 import { useI18n } from '../../i18n.jsx'
+import { updateAccount } from '../../api/kiroApi'
 
 function EditAccountModal({ account, onClose, onSuccess }) {
   const { theme, colors } = useTheme()
@@ -33,7 +33,6 @@ function EditAccountModal({ account, onClose, onSuccess }) {
     setSaving(true)
     try {
       const params = {
-        id: account.id,
         label: form.label || null,
         accessToken: form.accessToken || null,
         refreshToken: form.refreshToken || null,
@@ -43,7 +42,7 @@ function EditAccountModal({ account, onClose, onSuccess }) {
         params.clientId = form.clientId || null
         params.clientSecret = form.clientSecret || null
       }
-      await invoke('update_account', params)
+      await updateAccount(account.id, params)
       onSuccess?.()
       onClose()
     } catch (e) {

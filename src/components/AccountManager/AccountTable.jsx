@@ -11,15 +11,12 @@ function AccountTable({
   onSelectOne,
   copiedId,
   onCopy,
-  onSwitch,
   onRefresh,
   onEdit,
   onEditLabel,
   onDelete,
   onAdd,
   refreshingId,
-  switchingId,
-  localToken,
 }) {
   const { theme, colors } = useTheme()
   const { t } = useI18n()
@@ -63,14 +60,11 @@ function AccountTable({
               onSelect={(checked) => onSelectOne(account.id, checked)}
               copiedId={copiedId}
               onCopy={onCopy}
-              onSwitch={onSwitch}
               onRefresh={onRefresh}
               onEdit={onEdit}
               onEditLabel={onEditLabel}
               onDelete={onDelete}
               refreshingId={refreshingId}
-              switchingId={switchingId}
-              isCurrentAccount={localToken?.refreshToken && account.refreshToken === localToken.refreshToken}
             />
           ))}
           {/* 添加账号卡片 */}

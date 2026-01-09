@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
-import { invoke } from '@tauri-apps/api/core'
-import { listen } from '@tauri-apps/api/event'
-import { getQuota, getUsed } from '../../../utils/accountStats'
+import {
+  listAccounts,
+  refreshAccountToken,
+  syncAccount,
+  exportAccounts,
+} from '../../../api/kiroApi'
 
 export function useAccounts() {
   const [accounts, setAccounts] = useState([])
@@ -9,7 +12,6 @@ export function useAccounts() {
   const [refreshProgress, setRefreshProgress] = useState({ current: 0, total: 0, currentEmail: '', results: [] })
   const [lastRefreshTime, setLastRefreshTime] = useState(null)
   const [refreshingId, setRefreshingId] = useState(null)
-  const [switchingId, setSwitchingId] = useState(null)
 
   const isExpiringSoon = useCallback((account) => {
     if (!account.expiresAt) return true
@@ -19,7 +21,7 @@ export function useAccounts() {
 
   const loadAccounts = useCallback(async () => {
     try {
-      setAccounts(await invoke('get_accounts'))
+      setAccounts(await listAccounts())
     } catch (e) {
       console.error(e)
     }
@@ -42,7 +44,7 @@ export function useAccounts() {
       let success = false, message = ''
       try {
         // 只刷新 token，不获取 usage
-        const updated = await invoke('refresh_account_token', { id: account.id })
+        const updated = await refreshAccountToken(account.id)
         const idx = updatedAccounts.findIndex(a => a.id === account.id)
         if (idx !== -1) updatedAccounts[idx] = updated
         success = true
@@ -67,7 +69,7 @@ export function useAccounts() {
   const handleRefreshStatus = useCallback(async (id) => {
     setRefreshingId(id)
     try {
-      const updated = await invoke('sync_account', { id })
+      const updated = await syncAccount(id)
       setAccounts(prev => prev.map(a => a.id === id ? updated : a))
       return { success: true }
     } catch (e) {
@@ -83,24 +85,17 @@ export function useAccounts() {
 
   const handleExport = useCallback(async (selectedIds = []) => {
     try {
-      const { save } = await import('@tauri-apps/plugin-dialog')
-      const { writeTextFile } = await import('@tauri-apps/plugin-fs')
-      const { downloadDir } = await import('@tauri-apps/api/path')
-      
+      const data = await exportAccounts(selectedIds.length > 0 ? selectedIds : null)
+      const json = JSON.stringify(data, null, 2)
       const suffix = selectedIds.length > 0 ? `-${selectedIds.length}` : ''
       const defaultName = `kiro-accounts${suffix}-${new Date().toISOString().slice(0, 10)}.json`
-      const defaultDir = await downloadDir()
-      
-      const filePath = await save({
-        defaultPath: `${defaultDir}${defaultName}`,
-        filters: [{ name: 'JSON', extensions: ['json'] }],
-        title: '导出账号数据'
-      })
-      
-      if (!filePath) return // 用户取消
-      
-      const json = await invoke('export_accounts', { ids: selectedIds.length > 0 ? selectedIds : null })
-      await writeTextFile(filePath, json)
+      const blob = new Blob([json], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = defaultName
+      link.click()
+      URL.revokeObjectURL(url)
     } catch (e) {
       console.error('导出失败:', e)
     }
@@ -113,36 +108,14 @@ export function useAccounts() {
   // 初始化和事件监听
   useEffect(() => {
     loadAccounts()
-    const unlistenLoginSuccess = listen('login-success', () => loadAccounts())
-    const unlistenKiroLoginData = listen('kiro-login-data', async (event) => {
-      try {
-        const data = typeof event.payload === 'string' ? JSON.parse(event.payload) : event.payload
-        if (data?.accessToken && data?.refreshToken) {
-          await invoke('add_kiro_account', {
-            email: data.email || 'unknown@kiro.dev',
-            accessToken: data.accessToken,
-            refreshToken: data.refreshToken,
-            csrfToken: data.csrfToken || '',
-            idp: data.idp || 'Google',
-            quota: data.quota ?? null,
-            used: data.used ?? null
-          })
-          loadAccounts()
-        }
-      } catch (e) {
-        console.error('Failed to handle kiro-login-data:', e)
-      }
-    })
 
     const interval = setInterval(async () => {
       if (document.hidden) return
-      const data = await invoke('get_accounts')
+      const data = await listAccounts()
       if (data.length > 0) autoRefreshAll(data)
     }, 5 * 60 * 1000)
 
     return () => {
-      unlistenLoginSuccess.then(fn => fn())
-      unlistenKiroLoginData.then(fn => fn())
       clearInterval(interval)
     }
   }, [loadAccounts, autoRefreshAll])
@@ -154,8 +127,6 @@ export function useAccounts() {
     refreshProgress,
     lastRefreshTime,
     refreshingId,
-    switchingId,
-    setSwitchingId,
     autoRefreshAll,
     handleRefreshStatus,
     handleExport,
