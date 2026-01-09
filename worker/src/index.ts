@@ -29,6 +29,7 @@ type Account = {
 type Env = {
   KIRO_ACCOUNTS: KVNamespace
   APP_SECRET: string
+  ASSETS: Fetcher
 }
 
 type RefreshResponse = {
@@ -328,7 +329,17 @@ export default {
     const { pathname } = url
 
     if (!pathname.startsWith('/api')) {
-      return new Response('Not Found', { status: 404 })
+      if (request.method !== 'GET' && request.method !== 'HEAD') {
+        return new Response('Method Not Allowed', { status: 405 })
+      }
+      const assetResponse = await env.ASSETS.fetch(request)
+      if (
+        assetResponse.status === 404 &&
+        request.headers.get('Accept')?.includes('text/html')
+      ) {
+        return env.ASSETS.fetch(new Request(new URL('/index.html', url), request))
+      }
+      return assetResponse
     }
 
     try {
