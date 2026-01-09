@@ -116,10 +116,6 @@ function App() {
 
   useEffect(() => {
     setLoading(false)
-    // 启动自动刷新定时器
-    if (isAuthed) {
-      startAutoRefreshTimer()
-    }
     
     return () => { 
       if (refreshTimerRef.current) {
