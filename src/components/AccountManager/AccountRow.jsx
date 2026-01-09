@@ -1,4 +1,4 @@
-import { RefreshCw, Edit2, Trash2, Copy, Check, Clock, Repeat } from 'lucide-react'
+import { RefreshCw, Edit2, Trash2, Copy, Check, Clock } from 'lucide-react'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useI18n } from '../../i18n'
 import { getUsagePercent, getProgressBarColor } from './hooks/useAccountStats'
@@ -10,13 +10,10 @@ function AccountRow({
   onSelect,
   copiedId,
   onCopy,
-  onSwitch,
   onRefresh,
   onEdit,
   onDelete,
   refreshingId,
-  switchingId,
-  index = 0,
 }) {
   const { theme, colors } = useTheme()
   const { t } = useI18n()
@@ -116,14 +113,6 @@ function AccountRow({
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center justify-end gap-1">
-          <button 
-            onClick={() => onSwitch(account)} 
-            disabled={switchingId === account.id} 
-            className={`btn-icon p-1.5 ${isDark ? 'bg-blue-500/20 hover:bg-blue-500/30' : 'bg-blue-50 hover:bg-blue-100'} rounded-lg disabled:opacity-50 transition-all`} 
-            title={t('accountCard.switchAccount')}
-          >
-            <Repeat size={14} className={`text-blue-500 ${switchingId === account.id ? 'animate-spin' : ''}`} />
-          </button>
           <button 
             onClick={() => onRefresh(account.id)} 
             disabled={refreshingId === account.id} 

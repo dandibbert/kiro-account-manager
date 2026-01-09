@@ -352,13 +352,15 @@ impl KiroWebPortalClient {
         for value in response.headers().get_all("set-cookie") {
             if let Ok(cookie_str) = value.to_str() {
                 println!("[WebOAuth] Set-Cookie raw: {}", cookie_str);
-                if let Ok(c) = cookie::Cookie::parse(cookie_str) {
-                    println!("[WebOAuth] Set-Cookie parsed: {}={}", c.name(), &c.value()[..20.min(c.value().len())]);
-                    match c.name() {
-                        "RefreshToken" => cookie_session_token = Some(c.value().to_string()),
-                        "AccessToken" => cookie_access_token = Some(c.value().to_string()),
-                        "Idp" => cookie_idp = Some(c.value().to_string()),
-                        _ => {}
+                for parsed in cookie::Cookie::split_parse(cookie_str) {
+                    if let Ok(c) = parsed {
+                        println!("[WebOAuth] Set-Cookie parsed: {}={}", c.name(), &c.value()[..20.min(c.value().len())]);
+                        match c.name() {
+                            "RefreshToken" => cookie_session_token = Some(c.value().to_string()),
+                            "AccessToken" => cookie_access_token = Some(c.value().to_string()),
+                            "Idp" => cookie_idp = Some(c.value().to_string()),
+                            _ => {}
+                        }
                     }
                 }
             }
