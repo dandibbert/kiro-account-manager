@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
-import { invoke } from '@tauri-apps/api/core'
 import { RefreshCw, Users, Zap, Shield, Clock, TrendingUp, Sparkles } from 'lucide-react'
 import { useTheme } from '../contexts/ThemeContext'
 import { useDialog } from '../contexts/DialogContext'
 import { useI18n } from '../i18n.jsx'
 import { calcAccountStats, getQuota, getUsed } from '../utils/accountStats'
+import { listAccounts } from '../api/kiroApi'
 
 // 骨架屏组件
 function Skeleton({ className }) {
@@ -107,7 +107,6 @@ function Home() {
   const { showError } = useDialog()
   const { t } = useI18n()
   const [tokens, setTokens] = useState([])
-  const [localToken, setLocalToken] = useState(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
 
@@ -116,12 +115,8 @@ function Home() {
   const loadData = async () => {
     setLoading(true)
     try {
-      const [tokensData, localData] = await Promise.all([
-        invoke('get_accounts'),
-        invoke('get_kiro_local_token').catch(() => null)
-      ])
+      const tokensData = await listAccounts()
       setTokens(tokensData)
-      setLocalToken(localData)
     } catch (e) { 
       console.error('Failed to load data:', e)
       showError('加载失败', '加载数据失败: ' + e)
@@ -137,14 +132,7 @@ function Home() {
 
   const stats = calcAccountStats(tokens)
   
-  // 找到与当前登录账号匹配的账号（按优先级：refreshToken > accessToken > provider）
-  const currentAccount = localToken 
-    ? tokens.find(t => 
-        (localToken.refreshToken && t.refreshToken === localToken.refreshToken) ||
-        (localToken.accessToken && t.accessToken === localToken.accessToken) ||
-        (localToken.provider && t.provider === localToken.provider)
-      )
-    : null
+  const currentAccount = tokens[0] || null
   const currentQuota = currentAccount ? getQuota(currentAccount) : 0
   const currentUsed = currentAccount ? getUsed(currentAccount) : 0
   const currentPercent = currentQuota > 0 ? Math.round((currentUsed / currentQuota) * 100) : 0
@@ -199,66 +187,49 @@ function Home() {
               </button>
             </div>
             <div className="p-6">
-              {localToken ? (
+              {currentAccount ? (
                 <div className="space-y-4">
                   <div className="flex items-center gap-4">
                     <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-white font-bold text-2xl shadow-lg transition-transform hover:scale-105 ${
-                      localToken.provider === 'Google' ? 'bg-gradient-to-br from-red-500 to-orange-500 shadow-red-500/25' :
-                      localToken.provider === 'Github' ? 'bg-gradient-to-br from-gray-700 to-gray-900 shadow-gray-500/25' :
+                      currentAccount.provider === 'Google' ? 'bg-gradient-to-br from-red-500 to-orange-500 shadow-red-500/25' :
+                      currentAccount.provider === 'Github' ? 'bg-gradient-to-br from-gray-700 to-gray-900 shadow-gray-500/25' :
                       'bg-gradient-to-br from-blue-500 to-purple-600 shadow-blue-500/25'
                     }`}>
-                      {localToken.provider?.[0] || 'K'}
+                      {currentAccount.provider?.[0] || 'K'}
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className={`font-semibold ${colors.text} text-lg`}>{localToken.provider || '未知'}</span>
-                        <span className={`px-2.5 py-1 ${isDark ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-700'} rounded-full text-xs font-medium pulse-ring`}>{t('home.loggedIn')}</span>
+                        <span className={`font-semibold ${colors.text} text-lg`}>{currentAccount.email || '未知'}</span>
+                        <span className={`px-2.5 py-1 ${isDark ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-700'} rounded-full text-xs font-medium pulse-ring`}>{currentAccount.status || t('home.loggedIn')}</span>
                       </div>
-                      <div className={`text-sm ${colors.textMuted} mt-1`}>{localToken.authMethod || 'social'}</div>
+                      <div className={`text-sm ${colors.textMuted} mt-1`}>{currentAccount.provider || 'Kiro'}</div>
                     </div>
                   </div>
                   
                   <div className={`${isDark ? 'bg-white/5' : 'bg-gray-50'} rounded-xl p-4 space-y-3`}>
                     <div className="flex items-center justify-between text-sm">
                       <span className={colors.textMuted}>Access Token</span>
-                      <span title={localToken.accessToken} className={`font-mono text-xs ${colors.textMuted} truncate max-w-[180px] cursor-help`}>
-                        {localToken.accessToken?.substring(0, 20)}...
+                      <span title={currentAccount.accessToken} className={`font-mono text-xs ${colors.textMuted} truncate max-w-[180px] cursor-help`}>
+                        {currentAccount.accessToken?.substring(0, 20)}...
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className={colors.textMuted}>Refresh Token</span>
-                      <span title={localToken.refreshToken} className={`font-mono text-xs ${colors.textMuted} truncate max-w-[180px] cursor-help`}>
-                        {localToken.refreshToken?.substring(0, 20)}...
+                      <span title={currentAccount.refreshToken} className={`font-mono text-xs ${colors.textMuted} truncate max-w-[180px] cursor-help`}>
+                        {currentAccount.refreshToken?.substring(0, 20)}...
                       </span>
                     </div>
-                    {localToken.authMethod === 'IdC' ? (
-                      <>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className={colors.textMuted}>Client ID Hash</span>
-                          <span title={localToken.clientIdHash} className={`font-mono text-xs ${colors.textMuted} truncate max-w-[180px] cursor-help`}>
-                            {localToken.clientIdHash || '-'}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className={colors.textMuted}>Region</span>
-                          <span className={`font-mono text-xs ${colors.textMuted}`}>
-                            {localToken.region || '-'}
-                          </span>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="flex items-center justify-between text-sm">
-                        <span className={colors.textMuted}>Profile ARN</span>
-                        <span title={localToken.profileArn} className={`font-mono text-xs ${colors.textMuted} truncate max-w-[180px] cursor-help`}>
-                          {localToken.profileArn || '-'}
-                        </span>
-                      </div>
-                    )}
+                    <div className="flex items-center justify-between text-sm">
+                      <span className={colors.textMuted}>Profile ARN</span>
+                      <span title={currentAccount.profileArn} className={`font-mono text-xs ${colors.textMuted} truncate max-w-[180px] cursor-help`}>
+                        {currentAccount.profileArn || '-'}
+                      </span>
+                    </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className={colors.textMuted}>{t('home.expiresAt')}</span>
                       <span className={`${colors.text} flex items-center gap-1`}>
                         <Clock size={12} />
-                        {localToken.expiresAt ? new Date(localToken.expiresAt).toLocaleString() : '未知'}
+                        {currentAccount.expiresAt ? new Date(currentAccount.expiresAt).toLocaleString() : '未知'}
                       </span>
                     </div>
                   </div>
@@ -314,7 +285,7 @@ function Home() {
         </div>
 
         {/* 当前账号配额详情 */}
-        {localToken && currentAccount && (() => {
+        {currentAccount && (() => {
           const usageData = currentAccount.usageData
           const breakdown = usageData?.usageBreakdownList?.[0] || usageData?.usageBreakdown
           const subInfo = usageData?.subscriptionInfo
