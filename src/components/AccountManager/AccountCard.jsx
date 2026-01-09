@@ -1,4 +1,4 @@
-import { RefreshCw, Eye, Trash2, Copy, Check, Clock, Repeat, Edit2 } from 'lucide-react'
+import { RefreshCw, Eye, Trash2, Copy, Check, Clock, Edit2 } from 'lucide-react'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useI18n } from '../../i18n.jsx'
 import { getUsagePercent, getProgressBarColor } from './hooks/useAccountStats'
@@ -10,14 +10,11 @@ function AccountCard({
   onSelect,
   copiedId,
   onCopy,
-  onSwitch,
   onRefresh,
   onEdit,
   onEditLabel,
   onDelete,
   refreshingId,
-  switchingId,
-  isCurrentAccount,
 }) {
   const { theme, colors } = useTheme()
   const { t } = useI18n()
@@ -34,21 +31,17 @@ function AccountCard({
   const isNormal = account.status === '正常' || account.status === '有效'
 
   // 状态光环颜色
-  const glowColor = isCurrentAccount
-    ? 'shadow-green-500/30 hover:shadow-green-500/50'
-    : isBanned
-      ? 'shadow-red-500/30 hover:shadow-red-500/50'
-      : isNormal
-        ? ''
-        : 'shadow-orange-500/30 hover:shadow-orange-500/50'
+  const glowColor = isBanned
+    ? 'shadow-red-500/30 hover:shadow-red-500/50'
+    : isNormal
+      ? ''
+      : 'shadow-orange-500/30 hover:shadow-orange-500/50'
 
   return (
     <div className={`relative rounded-2xl border transition-all duration-200 hover:shadow-lg flex flex-col ${glowColor} ${
       isSelected 
         ? (isDark ? 'border-purple-500 bg-purple-500/10' : 'border-purple-400 bg-purple-50') 
-        : isCurrentAccount
-          ? (isDark ? 'border-green-500/50 bg-green-500/5' : 'border-green-400 bg-green-50/50')
-          : isBanned
+        : isBanned
             ? (isDark ? 'border-red-500/50 bg-red-500/5' : 'border-red-300 bg-red-50/50')
             : !isNormal
               ? (isDark ? 'border-orange-500/50 bg-orange-500/5' : 'border-orange-300 bg-orange-50/50')
@@ -113,11 +106,6 @@ function AccountCard({
           <span className={`text-xs px-2 py-1 rounded-lg ${isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-500'}`}>
             {account.provider || t('common.unknown')}
           </span>
-          {isCurrentAccount && (
-            <span className="text-xs px-2 py-1 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 text-white font-medium">
-              {t('common.currentlyUsing')}
-            </span>
-          )}
         </div>
 
         {/* 配额进度 */}
@@ -157,14 +145,6 @@ function AccountCard({
 
         {/* 操作按钮 */}
         <div className="flex items-center justify-center gap-2 pt-2 mt-auto border-t border-gray-200 dark:border-gray-700">
-          <button 
-            onClick={() => onSwitch(account)} 
-            disabled={switchingId === account.id} 
-            className={`p-2 rounded-lg transition-all ${isDark ? 'hover:bg-white/10' : 'hover:bg-gray-100'} disabled:opacity-50`}
-            title={t('accountCard.switchAccount')}
-          >
-            <Repeat size={14} className={`text-blue-500 ${switchingId === account.id ? 'animate-spin' : ''}`} />
-          </button>
           <button 
             onClick={() => onRefresh(account.id)} 
             disabled={refreshingId === account.id} 

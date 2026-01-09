@@ -1,5 +1,4 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import { invoke } from '@tauri-apps/api/core'
 
 const ThemeContext = createContext()
 
@@ -94,24 +93,19 @@ export function ThemeProvider({ children }) {
   const [theme, setThemeState] = useState('dark')
   const [loaded, setLoaded] = useState(false)
 
-  // 从文件加载设置
+  // 从本地存储加载设置
   useEffect(() => {
-    invoke('get_app_settings').then(settings => {
-      if (settings?.theme && themes[settings.theme]) {
-        setThemeState(settings.theme)
-      }
-      setLoaded(true)
-    }).catch(() => setLoaded(true))
+    const storedTheme = localStorage.getItem('theme')
+    if (storedTheme && themes[storedTheme]) {
+      setThemeState(storedTheme)
+    }
+    setLoaded(true)
   }, [])
 
-  // 保存设置到文件
+  // 保存设置到本地存储
   const setTheme = (newTheme) => {
     setThemeState(newTheme)
-    invoke('get_app_settings').then(settings => {
-      invoke('save_app_settings', { settings: { ...settings, theme: newTheme } })
-    }).catch(() => {
-      invoke('save_app_settings', { settings: { theme: newTheme } })
-    })
+    localStorage.setItem('theme', newTheme)
   }
 
   useEffect(() => {
@@ -123,6 +117,10 @@ export function ThemeProvider({ children }) {
     setTheme,
     colors: themes[theme],
     themes,
+  }
+
+  if (!loaded) {
+    return null
   }
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>

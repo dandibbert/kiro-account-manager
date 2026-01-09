@@ -109,6 +109,44 @@
 - **macOS**: macOS 10.15+ (Intel/Apple Silicon 通用)
 - **Linux**: x86_64，需要 WebKitGTK
 
+## 🚀 Cloudflare Workers 一体部署（Web 版）
+
+本版本支持 **Workers + KV + 前端静态资源** 一次部署，部署前请确保已安装并登录 Wrangler。
+
+1) 安装并登录 Wrangler
+
+```bash
+npm install -g wrangler
+wrangler login
+```
+
+2) 构建前端产物
+
+```bash
+npm install
+npm run build
+```
+
+3) 创建 KV 命名空间并写入 `wrangler.toml`
+
+```bash
+wrangler kv:namespace create KIRO_ACCOUNTS
+```
+
+把返回的 `id` 写入 `wrangler.toml` 的 `kv_namespaces` 配置中。
+
+4) 设置鉴权密钥（APP_SECRET）
+
+在 `wrangler.toml` 的 `[vars]` 中填写 `APP_SECRET`，用于 API Bearer 鉴权。
+
+5) 一次部署
+
+```bash
+wrangler deploy
+```
+
+部署完成后，直接访问 Workers URL 即可。首次进入页面会要求输入 `APP_SECRET` 进行登录。
+
 ## 💬 交流反馈
 
 - 🐛 [提交 Issue](https://github.com/hj01857655/kiro-account-manager/issues)

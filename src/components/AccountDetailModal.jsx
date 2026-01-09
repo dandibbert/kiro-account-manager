@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { invoke } from '@tauri-apps/api/core'
 import { X, Copy, Check, RefreshCw, User, CreditCard, Key, Clock, ChevronDown, ChevronUp, Shield } from 'lucide-react'
 import { useTheme } from '../contexts/ThemeContext'
 import { useDialog } from '../contexts/DialogContext'
 import { useI18n } from '../i18n'
+import { syncAccount } from '../api/kiroApi'
 
 function AccountDetailModal({ account, onClose }) {
   const { theme, colors } = useTheme()
@@ -31,7 +31,7 @@ function AccountDetailModal({ account, onClose }) {
   const handleRefresh = async () => {
     setRefreshing(true)
     try {
-      const updated = await invoke('sync_account', { id: account.id })
+      const updated = await syncAccount(account.id)
       const quota = updated.usageData?.usageBreakdownList?.[0]?.usageLimit ?? 50
       const used = updated.usageData?.usageBreakdownList?.[0]?.currentUsage ?? 0
       setForm(prev => ({ ...prev, quota, used, status: updated.status }))
