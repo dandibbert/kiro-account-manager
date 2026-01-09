@@ -3,10 +3,3 @@ main = "worker/src/index.ts"
 compatibility_date = "2024-12-12"
 
 assets = { directory = "dist" }
-
-kv_namespaces = [
-  { binding = "KIRO_ACCOUNTS", id = "CHANGE_ME" }
-]
-
-[vars]
-APP_SECRET = "CHANGE_ME"
